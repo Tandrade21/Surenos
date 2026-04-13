@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herramienta Operativa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-section { display: block !important; }
+        .tab-btn:hover { background-color: #3b82f6; color: white; }
+    </style>
+</head>
+<body class="bg-gray-100 flex min-h-screen">
+
+    <nav class="w-64 bg-slate-900 text-white p-6 space-y-4">
+        <h1 class="text-xl font-bold border-b border-slate-700 pb-4">🛠 Mi Panel</h1>
+        <button onclick="showSection('cot')" class="w-full text-left p-3 rounded tab-btn">📄 Cotizaciones</button>
+        <button onclick="showSection('cal')" class="w-full text-left p-3 rounded tab-btn">📅 Calendario</button>
+        <button onclick="showSection('inv')" class="w-full text-left p-3 rounded tab-btn">📦 Inventario ERP</button>
+        <button onclick="showSection('pre')" class="w-full text-left p-3 rounded tab-btn">💰 Calc. Ganancia</button>
+    </nav>
+
+    <main class="flex-1 p-8">
+        
+        <section id="cot" class="hidden active-section bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-bold mb-4">Cotizaciones de Empresas</h2>
+            <input type="file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-4" />
+            <p class="text-gray-500 italic">Próximamente: Lista de archivos subidos.</p>
+        </section>
+
+        <section id="cal" class="hidden bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-bold mb-4">Notas y Recordatorios</h2>
+            <div class="flex gap-2 mb-6">
+                <input type="date" id="cal-fecha" class="border p-2 rounded">
+                <input type="text" id="cal-nota" placeholder="Nota del día..." class="border p-2 flex-1 rounded">
+                <button onclick="addNota()" class="bg-blue-600 text-white px-4 py-2 rounded">Añadir</button>
+            </div>
+            <ul id="lista-notas" class="space-y-2"></ul>
+        </section>
+
+        <section id="inv" class="hidden bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-bold mb-4">Visualizador de Inventario</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
+                <div class="bg-red-100 p-4 rounded text-red-700 font-bold">Quiebres: <span id="q-count">0</span></div>
+                <div class="bg-blue-100 p-4 rounded text-blue-700 font-bold">Total Productos: <span id="p-count">0</span></div>
+                <div class="bg-green-100 p-4 rounded text-green-700 font-bold">Marca Líder: <span id="m-count">-</span></div>
+            </div>
+            <p class="text-sm text-gray-500 mb-2">Pega aquí tus datos del ERP (Formato: Marca, Producto, Stock)</p>
+            <textarea id="data-erp" class="w-full h-32 border p-2 mb-2" placeholder="Ejemplo: Nike, Zapatilla, 0"></textarea>
+            <button onclick="procesarInv()" class="bg-slate-800 text-white px-4 py-2 rounded mb-4">Procesar Datos</button>
+            <table class="w-full border-collapse border">
+                <thead class="bg-gray-200"><tr><th class="border p-2">Marca</th><th class="border p-2">Producto</th><th class="border p-2">Stock</th></tr></thead>
+                <tbody id="tabla-inv"></tbody>
+            </table>
+        </section>
+
+        <section id="pre" class="hidden bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-bold mb-4">Calculadora de Ganancia</h2>
+            <div class="max-w-md space-y-4">
+                <div><label class="block">Precio Neto Costo ($)</label><input type="number" id="costo" oninput="calc()" class="w-full border p-2 rounded"></div>
+                <div><label class="block">Precio Venta ($)</label><input type="number" id="venta" oninput="calc()" class="w-full border p-2 rounded"></div>
+                <div id="res-calc" class="p-4 rounded-lg font-bold text-center border-2 border-dashed">Calculando...</div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        function showSection(id) {
+            document.querySelectorAll('section').forEach(s => s.classList.remove('active-section'));
+            document.getElementById(id).classList.add('active-section');
+        }
+
+        function addNota() {
+            const f = document.getElementById('cal-fecha').value;
+            const n = document.getElementById('cal-nota').value;
+            if(!f || !n) return;
+            const li = document.createElement('li');
+            li.className = "p-2 bg-yellow-50 border-l-4 border-yellow-400 shadow-sm";
+            li.innerHTML = `<strong>${f}:</strong> ${n}`;
+            document.getElementById('lista-notas').prepend(li);
+        }
+
+        function calc() {
+            const c = parseFloat(document.getElementById('costo').value) || 0;
+            const v = parseFloat(document.getElementById('venta').value) || 0;
+            const res = document.getElementById('res-calc');
+            if(c && v) {
+                const gan = v - c;
+                const marg = (gan / v) * 100;
+                res.innerHTML = `Ganancia: $${gan.toLocaleString()} | Margen: ${marg.toFixed(1)}%`;
+                res.className = marg > 15 ? "p-4 rounded bg-green-100 text-green-800" : "p-4 rounded bg-red-100 text-red-800";
+            }
+        }
+
+        function procesarInv() {
+            const raw = document.getElementById('data-erp').value;
+            const rows = raw.split('\n');
+            const tbody = document.getElementById('tabla-inv');
+            tbody.innerHTML = "";
+            let quiebres = 0;
+            rows.forEach(line => {
+                const parts = line.split(',');
+                if(parts.length >= 3) {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `<td class="border p-2">${parts[0]}</td><td class="border p-2">${parts[1]}</td><td class="border p-2 text-center ${parts[2] <= 0 ? 'bg-red-200 text-red-800' : ''}">${parts[2]}</td>`;
+                    if(parseInt(parts[2]) <= 0) quiebres++;
+                }
+            });
+            document.getElementById('q-count').innerText = quiebres;
+            document.getElementById('p-count').innerText = rows.length;
+        }
+    </script>
+</body>
+</html>
